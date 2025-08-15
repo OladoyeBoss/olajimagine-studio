@@ -6,18 +6,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { generateImageSchema, type GenerateImageRequest } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
 
 export function ImageGenerationForm() {
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   const form = useForm<GenerateImageRequest>({
     resolver: zodResolver(generateImageSchema),
@@ -41,6 +43,7 @@ export function ImageGenerationForm() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/images"] });
       form.reset();
+      setIsGenerating(false);
     },
     onError: (error) => {
       toast({
@@ -48,209 +51,146 @@ export function ImageGenerationForm() {
         description: error.message || "Unable to generate image. Please try again.",
         variant: "destructive",
       });
+      setIsGenerating(false);
     },
   });
 
   const onSubmit = (data: GenerateImageRequest) => {
+    setIsGenerating(true);
     generateImageMutation.mutate(data);
   };
 
   const prompt = form.watch("prompt");
 
-  // Handle loading state
   if (isLoading) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-8">
-        <div className="flex items-center justify-center">
-          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      </div>
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardContent className="p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </CardContent>
+      </Card>
     );
   }
 
-  // Handle unauthenticated state
   if (!isAuthenticated) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-        <i className="fas fa-lock text-4xl text-gray-400 mb-4"></i>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Sign In Required</h3>
-        <p className="text-gray-600 mb-6">
-          Please sign in to start generating amazing images with AI
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link to="/signin" className="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-            Sign In
-          </Link>
-          <Link to="/signup" className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50">
-            Create Account
-          </Link>
-        </div>
-      </div>
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardContent className="p-8 text-center">
+          <i className="fas fa-lock text-4xl text-gray-400 mb-4"></i>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Sign In Required</h3>
+          <p className="text-gray-600 mb-6">
+            Please sign in to start generating amazing images with AI
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link to="/signin" className="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+              Sign In
+            </Link>
+            <Link to="/signup" className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50">
+              Create Account
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 lg:p-8 mb-8">
-      {generateImageMutation.isPending && (
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 mb-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full mb-4">
-              <i className="fas fa-magic text-indigo-600 text-xl animate-pulse"></i>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Creating Your Image</h3>
-            <p className="text-gray-600 mb-6">Our AI is painting your vision... This usually takes 10-30 seconds.</p>
-            
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 h-2 rounded-full animate-pulse w-2/5"></div>
-            </div>
-            
-            <div className="flex justify-center space-x-2">
-              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce delay-100"></div>
-              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce delay-200"></div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <Form {...form}>
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          AI Image Generator
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-8">
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="prompt"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm font-semibold text-gray-900">
-                  Describe your image
-                </FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Textarea
-                      {...field}
-                      placeholder="A serene landscape with mountains reflected in a crystal-clear lake at sunset, painted in the style of Claude Monet..."
-                      className="resize-none h-24 pr-16"
-                      maxLength={2000}
-                      data-testid="input-prompt"
-                    />
-                    <div className="absolute bottom-3 right-3 text-xs text-gray-400">
-                      {prompt?.length || 0}/2000
-                    </div>
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="border-t border-gray-200 pt-6">
-            <button 
-              type="button"
-              className="flex items-center text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors mb-4"
-              onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-              data-testid="button-toggle-advanced"
-            >
-              <i className="fas fa-sliders-h mr-2"></i>
-              Advanced Options
-              <i className={`fas fa-chevron-down ml-2 transform transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`}></i>
-            </button>
-            
-            {isAdvancedOpen && (
-              <div className="grid md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="style"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700">Style</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-style">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="photorealistic">Photorealistic</SelectItem>
-                          <SelectItem value="digital-art">Digital Art</SelectItem>
-                          <SelectItem value="oil-painting">Oil Painting</SelectItem>
-                          <SelectItem value="sketch">Sketch</SelectItem>
-                          <SelectItem value="anime">Anime</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="size"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700">Size</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-size">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="1024x1024">1024x1024 (Square)</SelectItem>
-                          <SelectItem value="1024x1792">1024x1792 (Portrait)</SelectItem>
-                          <SelectItem value="1792x1024">1792x1024 (Landscape)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="quality"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700">Quality</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-quality">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="standard">Standard</SelectItem>
-                          <SelectItem value="hd">HD</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="prompt" className="text-sm font-semibold text-gray-700">
+              Describe your image
+            </Label>
+            <Textarea
+              id="prompt"
+              placeholder="A majestic mountain landscape at sunset with golden light..."
+              className="min-h-[100px] resize-none"
+              {...form.register("prompt")}
+            />
+            {form.formState.errors.prompt && (
+              <p className="text-sm text-red-600">{form.formState.errors.prompt.message}</p>
             )}
           </div>
 
-          <div className="flex justify-center">
-            <Button 
-              type="submit"
-              disabled={generateImageMutation.isPending || !prompt?.trim()}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-indigo-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-              data-testid="button-generate"
-            >
-              {generateImageMutation.isPending ? (
-                <span className="flex items-center">
-                  <i className="fas fa-spinner animate-spin mr-2"></i>
-                  Generating...
-                </span>
-              ) : (
-                <span className="flex items-center">
-                  <i className="fas fa-sparkles mr-2"></i>
-                  Generate Image
-                </span>
-              )}
-            </Button>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-gray-700">Style</Label>
+              <Select
+                value={form.watch("style")}
+                onValueChange={(value) => form.setValue("style", value as any)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="photorealistic">Photorealistic</SelectItem>
+                  <SelectItem value="artistic">Artistic</SelectItem>
+                  <SelectItem value="cartoon">Cartoon</SelectItem>
+                  <SelectItem value="abstract">Abstract</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-gray-700">Size</Label>
+              <Select
+                value={form.watch("size")}
+                onValueChange={(value) => form.setValue("size", value as any)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1024x1024">Square (1024x1024)</SelectItem>
+                  <SelectItem value="1792x1024">Landscape (1792x1024)</SelectItem>
+                  <SelectItem value="1024x1792">Portrait (1024x1792)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-gray-700">Quality</Label>
+              <Select
+                value={form.watch("quality")}
+                onValueChange={(value) => form.setValue("quality", value as any)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="hd">HD Quality</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          <Button
+            type="submit"
+            disabled={!prompt?.trim() || isGenerating}
+            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 text-lg"
+          >
+            {isGenerating ? (
+              <>
+                <i className="fas fa-spinner fa-spin mr-2"></i>
+                Generating Image...
+              </>
+            ) : (
+              <>
+                <i className="fas fa-sparkles mr-2"></i>
+                Generate Image
+              </>
+            )}
+          </Button>
         </form>
-      </Form>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

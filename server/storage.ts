@@ -6,12 +6,23 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByUsernameOrEmail(usernameOrEmail: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+  updateUser(id: string, updates: Partial<User>): Promise<User>;
+
   // Image-related methods
   createGeneratedImage(image: InsertImage): Promise<GeneratedImage>;
   getGeneratedImages(limit?: number, offset?: number): Promise<GeneratedImage[]>;
   getUserGeneratedImages(userId: string, limit?: number, offset?: number): Promise<GeneratedImage[]>;
   getGeneratedImage(id: string): Promise<GeneratedImage | undefined>;
+  deleteGeneratedImage(id: string): Promise<void>;
+
+  // Contact submission methods
+  createContactSubmission(data: {
+    name: string;
+    email: string;
+    message: string;
+    timestamp: string;
+  }): Promise<any>;
+  getContactSubmissions(): Promise<any[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -49,6 +60,17 @@ export class MemStorage implements IStorage {
     return newUser;
   }
 
+  async updateUser(id: string, updates: Partial<User>): Promise<User> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) {
+      throw new Error("User not found");
+    }
+    
+    const updatedUser = { ...existingUser, ...updates };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
   async createGeneratedImage(image: InsertImage): Promise<GeneratedImage> {
     const newImage: GeneratedImage = {
       id: randomUUID(),
@@ -76,38 +98,61 @@ export class MemStorage implements IStorage {
     return this.generatedImages.get(id);
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { 
-      ...insertUser, 
-      id,
-      createdAt: new Date(),
-    };
-    this.users.set(id, user);
-    return user;
+  async deleteGeneratedImage(id: string): Promise<void> {
+    this.generatedImages.delete(id);
   }
 
-  async createGeneratedImage(insertImage: InsertImage): Promise<GeneratedImage> {
-    const id = randomUUID();
-    const generatedImage: GeneratedImage = {
-      ...insertImage,
-      id,
-      provider: insertImage.provider || "Flux",
-      createdAt: new Date(),
-    };
-    this.generatedImages.set(id, generatedImage);
-    return generatedImage;
+  async createContactSubmission(data: {
+    name: string;
+    email: string;
+    message: string;
+    timestamp: string;
+  }): Promise<any> {
+    // For now, we'll store in a simple JSON file since we don't have a contacts table
+    // In production, you'd create a proper database table
+    const fs = await import('fs/promises');
+    const path = await import('path');
+
+    const contactsFile = path.join(process.cwd(), 'contacts.json');
+
+    try {
+      let contacts = [];
+      try {
+        const existing = await fs.readFile(contactsFile, 'utf-8');
+        contacts = JSON.parse(existing);
+      } catch (error) {
+        // File doesn't exist yet, start with empty array
+      }
+
+      const submission = {
+        id: `contact_${Date.now()}`,
+        ...data
+      };
+
+      contacts.push(submission);
+
+      await fs.writeFile(contactsFile, JSON.stringify(contacts, null, 2));
+      return submission;
+    } catch (error) {
+      console.error('Error saving contact submission:', error);
+      throw error;
+    }
   }
 
-  async getGeneratedImages(limit: number = 20, offset: number = 0): Promise<GeneratedImage[]> {
-    const allImages = Array.from(this.generatedImages.values())
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    
-    return allImages.slice(offset, offset + limit);
-  }
+  async getContactSubmissions(): Promise<any[]> {
+    const fs = await import('fs/promises');
+    const path = await import('path');
 
-  async getGeneratedImage(id: string): Promise<GeneratedImage | undefined> {
-    return this.generatedImages.get(id);
+    const contactsFile = path.join(process.cwd(), 'contacts.json');
+
+    try {
+      const data = await fs.readFile(contactsFile, 'utf-8');
+      const contacts = JSON.parse(data);
+      return contacts.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    } catch (error) {
+      // File doesn't exist yet
+      return [];
+    }
   }
 }
 

@@ -11,7 +11,7 @@ export function ImageGallery() {
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const { data: images, isLoading, error } = useQuery<GeneratedImage[]>({
     queryKey: ["/api/images"],
   });
@@ -83,13 +83,13 @@ export function ImageGallery() {
   return (
     <section className="py-8 lg:py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         <div className="flex items-center justify-between mb-8">
           <div>
             <h3 className="text-2xl font-bold text-gray-900">Your Generated Images</h3>
             <p className="text-gray-600 mt-1">Recent creations from your imagination</p>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             <button className="p-2 text-gray-500 hover:text-indigo-600 transition-colors" data-testid="button-grid-view">
               <i className="fas fa-th-large"></i>
@@ -115,15 +115,15 @@ export function ImageGallery() {
         ) : images && images.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {images.map((image) => (
-              <div 
-                key={image.id} 
+              <div
+                key={image.id}
                 className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                 data-testid={`card-image-${image.id}`}
               >
                 <div className="relative aspect-square overflow-hidden">
-                  <img 
-                    src={image.imageUrl} 
-                    alt={image.prompt} 
+                  <img
+                    src={image.imageUrl}
+                    alt={image.prompt}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 cursor-pointer"
                     loading="lazy"
                     onClick={() => setSelectedImage(image)}
@@ -131,7 +131,7 @@ export function ImageGallery() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <button 
+                    <button
                       onClick={() => downloadImage(image.imageUrl, image.prompt)}
                       className="bg-white/90 backdrop-blur-sm text-gray-700 p-2 rounded-lg hover:bg-white transition-colors"
                       data-testid={`button-download-${image.id}`}
@@ -141,8 +141,8 @@ export function ImageGallery() {
                   </div>
                 </div>
                 <div className="p-4">
-                  <p 
-                    className="text-sm text-gray-600 line-clamp-2" 
+                  <p
+                    className="text-sm text-gray-600 line-clamp-2"
                     title={image.prompt}
                     data-testid={`text-prompt-${image.id}`}
                   >
@@ -192,8 +192,8 @@ export function ImageGallery() {
             </DialogHeader>
             {selectedImage && (
               <div className="space-y-4">
-                <img 
-                  src={selectedImage.imageUrl} 
+                <img
+                  src={selectedImage.imageUrl}
                   alt={selectedImage.prompt}
                   className="w-full max-h-96 object-contain rounded-lg"
                 />

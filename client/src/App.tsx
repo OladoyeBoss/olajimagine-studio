@@ -5,7 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import Home from "./pages/home";
 import { SignUp } from "./pages/signup";
 import { SignIn } from "./pages/signin";
-import { Gallery } from "./pages/gallery";
+import { Profile } from "@/pages/profile";
+import { Admin } from "@/pages/admin";
 import { Help } from "./pages/help";
 import { Contact } from "./pages/contact";
 import NotFound from "./pages/not-found";
@@ -17,7 +18,8 @@ function App() {
         <Route path="/" component={Home} />
         <Route path="/signup" component={SignUp} />
         <Route path="/signin" component={SignIn} />
-        <Route path="/gallery" component={Gallery} />
+        <Route path="/profile" component={Profile} />
+        <Route path="/admin" component={Admin} />
         <Route path="/help" component={Help} />
         <Route path="/contact" component={Contact} />
         <Route component={NotFound} />

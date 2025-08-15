@@ -21,6 +21,49 @@ function requireAuth(req: any, res: any, next: any) {
   next();
 }
 
+// Email notification function using a simple email service
+async function sendEmailNotification(submission: any) {
+  // Using EmailJS or similar service for client-side email sending
+  // For production, consider using SendGrid, Nodemailer with SMTP, or similar
+  
+  const emailData = {
+    to_email: "oladoyejoel3@gmail.com", // Admin email
+    from_name: submission.name,
+    from_email: submission.email,
+    message: submission.message,
+    timestamp: submission.timestamp
+  };
+  
+  // Simple webhook-based email notification
+  // You can replace this with your preferred email service
+  try {
+    const response = await fetch("https://formspree.io/f/mrbgrvjv", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: submission.email,
+        name: submission.name,
+        message: `New contact form submission from ${submission.name} (${submission.email}):
+
+${submission.message}
+
+Submitted at: ${submission.timestamp}`,
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Email service responded with status: ${response.status}`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Failed to send email notification:", error);
+    throw error;
+  }
+}
+
 // API Configuration - Using GiftedTech with GET requests
 const GIFTED_FLUX_API_URL = "https://api.giftedtech.web.id/api/ai/fluximg";
 const GIFTED_SD_API_URL = "https://api.giftedtech.web.id/api/ai/sd";
@@ -360,6 +403,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete image endpoint (requires authentication and ownership)
+  app.delete("/api/images/:id", requireAuth, async (req, res) => {
+    try {
+      const image = await storage.getGeneratedImage(req.params.id);
+      if (!image) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+
+      // Check if the image belongs to the authenticated user
+      if (image.userId !== req.session.userId) {
+        return res.status(403).json({ message: "You can only delete your own images" });
+      }
+
+      await storage.deleteGeneratedImage(req.params.id);
+      res.json({ message: "Image deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      res.status(500).json({ message: "Failed to delete image" });
+    }
+  });
+
   // Contact form endpoint
   app.post("/api/contact", async (req, res) => {
     try {
@@ -374,15 +438,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("📧 New Contact Form Submission:", contactSubmission);
       
-      // Store in memory for admin notifications (you could extend this to use a database)
-      // In a production app, you'd integrate with email services like SendGrid, Nodemailer, etc.
+      // Store contact submission in database for admin review
+      await storage.createContactSubmission({
+        name,
+        email,
+        message,
+        timestamp: contactSubmission.timestamp
+      });
       
-      // Send notification to admin (placeholder - implement with your preferred email service)
+      // Send email notification to admin
       try {
-        // Example: await sendEmailNotification(contactSubmission);
-        console.log("✅ Admin notification sent successfully");
+        await sendEmailNotification(contactSubmission);
+        console.log("✅ Email notification sent successfully");
       } catch (emailError) {
-        console.log("⚠️ Failed to send admin notification:", emailError);
+        console.log("⚠️ Failed to send email notification:", emailError);
         // Don't fail the request if notification fails
       }
       
@@ -393,6 +462,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("❌ Error processing contact form:", error);
       res.status(500).json({ message: "Failed to send message. Please try again." });
+    }
+  });
+
+  // Update profile endpoint (requires authentication)
+  app.post("/api/auth/update-profile", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { username, currentPassword, newPassword } = req.body;
+      
+      // Verify current password if provided
+      if (currentPassword) {
+        const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+        if (!isPasswordValid) {
+          return res.status(401).json({ message: "Current password is incorrect" });
+        }
+      }
+
+      const updates: any = {};
+      
+      // Update username if provided
+      if (username && username !== user.username) {
+        // Check if username is already taken
+        const existingUser = await storage.getUserByUsername(username);
+        if (existingUser && existingUser.id !== user.id) {
+          return res.status(400).json({ message: "Username already exists" });
+        }
+        updates.username = username;
+      }
+
+      // Update password if provided
+      if (newPassword && currentPassword) {
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        updates.password = hashedPassword;
+      }
+
+      // Handle profile picture upload (simplified - in production use proper file upload middleware)
+      // For now, we'll just store a placeholder URL
+      const profilePictureFile = req.body.profilePicture;
+      if (profilePictureFile) {
+        // In a real app, you'd upload to cloud storage and get a URL
+        updates.profilePicture = `https://ui-avatars.com/api/?name=${encodeURIComponent(username || user.username)}&background=6366f1&color=fff&size=200`;
+      }
+
+      // Update user profile
+      await storage.updateUser(user.id, updates);
+
+      res.json({ 
+        message: "Profile updated successfully",
+        user: {
+          id: user.id,
+          username: updates.username || user.username,
+          email: user.email,
+          profilePicture: updates.profilePicture || user.profilePicture
+        }
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // Get contact submissions for admin (requires authentication)
+  app.get("/api/contact/submissions", requireAuth, async (req, res) => {
+    try {
+      // Only allow specific admin users to view submissions
+      const user = await storage.getUser(req.session.userId);
+      const adminEmails = [
+        "oladoyejoel3@gmail.com",
+        "faithjesus3@gmail.com", 
+        "oladoyeheritage445@gmail.com"
+      ];
+      
+      if (!user || !adminEmails.includes(user.email)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const submissions = await storage.getContactSubmissions();
+      res.json(submissions);
+    } catch (error) {
+      console.error("Error fetching contact submissions:", error);
+      res.status(500).json({ message: "Failed to fetch submissions" });
     }
   });
 

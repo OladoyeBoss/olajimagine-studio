@@ -1,10 +1,46 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import type { GeneratedImage } from "@shared/schema";
+import { useState } from "react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "./ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 
 export function ImageGallery() {
+  const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   const { data: images, isLoading, error } = useQuery<GeneratedImage[]>({
     queryKey: ["/api/images"],
+  });
+
+  const regenerateImageMutation = useMutation({
+    mutationFn: async (image: GeneratedImage) => {
+      const res = await apiRequest("POST", "/api/generate-image", {
+        prompt: image.prompt,
+        style: image.style,
+        size: image.size,
+        quality: image.quality,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Image Regenerated",
+        description: "A new version of your image has been created!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/images"] });
+      setSelectedImage(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Regeneration Failed",
+        description: error.message || "Unable to regenerate image. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   if (error) {
@@ -88,8 +124,9 @@ export function ImageGallery() {
                   <img 
                     src={image.imageUrl} 
                     alt={image.prompt} 
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 cursor-pointer"
                     loading="lazy"
+                    onClick={() => setSelectedImage(image)}
                     data-testid={`img-generated-${image.id}`}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -146,6 +183,70 @@ export function ImageGallery() {
             </p>
           </div>
         )}
+
+        {/* Preview Modal */}
+        <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Image Preview</DialogTitle>
+            </DialogHeader>
+            {selectedImage && (
+              <div className="space-y-4">
+                <img 
+                  src={selectedImage.imageUrl} 
+                  alt={selectedImage.prompt}
+                  className="w-full max-h-96 object-contain rounded-lg"
+                />
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-900">Prompt:</p>
+                  <p className="text-sm text-gray-600">"{selectedImage.prompt}"</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-xs text-gray-500">
+                    <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
+                      {selectedImage.size}
+                    </span>
+                    {selectedImage.quality === 'hd' && (
+                      <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                        HD
+                      </span>
+                    )}
+                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded">
+                      {selectedImage.provider}
+                    </span>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => downloadImage(selectedImage.imageUrl, selectedImage.prompt)}
+                    >
+                      <i className="fas fa-download mr-2"></i>
+                      Download
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => regenerateImageMutation.mutate(selectedImage)}
+                      disabled={regenerateImageMutation.isPending}
+                    >
+                      {regenerateImageMutation.isPending ? (
+                        <>
+                          <i className="fas fa-spinner animate-spin mr-2"></i>
+                          Regenerating...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-redo mr-2"></i>
+                          Regenerate
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
       </div>
     </section>

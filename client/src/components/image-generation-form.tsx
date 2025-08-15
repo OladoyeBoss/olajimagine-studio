@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -9,11 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "wouter";
 
 export function ImageGenerationForm() {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAuthenticated, isLoading } = useAuth();
 
   const form = useForm<GenerateImageRequest>({
     resolver: zodResolver(generateImageSchema),
@@ -52,6 +56,38 @@ export function ImageGenerationForm() {
   };
 
   const prompt = form.watch("prompt");
+
+  // Handle loading state
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-lg p-8">
+        <div className="flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle unauthenticated state
+  if (!isAuthenticated) {
+    return (
+      <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
+        <i className="fas fa-lock text-4xl text-gray-400 mb-4"></i>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">Sign In Required</h3>
+        <p className="text-gray-600 mb-6">
+          Please sign in to start generating amazing images with AI
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Link to="/signin" className="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+            Sign In
+          </Link>
+          <Link to="/signup" className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50">
+            Create Account
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 lg:p-8 mb-8">

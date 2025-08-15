@@ -43,22 +43,49 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <i className="fas fa-magic text-white text-sm"></i>
-            </div>
+            <img 
+              src="https://files.catbox.moe/i0abuj.jpg" 
+              alt="Oladoyebossimagine Studio" 
+              className="w-10 h-10 rounded-lg object-cover"
+            />
             <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Olajimagine Studio
+              Oladoyebossimagine Studio
             </span>
           </Link>
 
           {/* Navigation */}
           <nav className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
+              <Link
+                to="/gallery"
+                className="text-gray-700 hover:text-indigo-600 font-medium"
+              >
+                Gallery
+              </Link>
+              <Link
+                to="/help"
+                className="text-gray-700 hover:text-indigo-600 font-medium"
+              >
+                Help
+              </Link>
+              <Link
+                to="/contact"
+                className="text-gray-700 hover:text-indigo-600 font-medium"
+              >
+                Contact
+              </Link>
+            </div>
             {isLoading ? (
               <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
             ) : isAuthenticated && user ? (
               <div className="flex items-center space-x-4">
                 <span className="text-gray-700 font-medium">
                   Welcome, {user.username}
+                  {user.isPremium === "true" && (
+                    <span className="ml-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs px-2 py-1 rounded-full">
+                      PREMIUM
+                    </span>
+                  )}
                 </span>
                 <button
                   onClick={handleSignout}

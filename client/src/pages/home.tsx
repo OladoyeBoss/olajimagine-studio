@@ -14,11 +14,12 @@ export default function Home() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6">
               Create <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Amazing Images</span> 
-              with Olajimagine AI
+              with Oladoyebossimagine AI
             </h2>
             <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
               Transform your ideas into stunning visuals using multiple AI providers with automatic fallback. 
               Our system tries Flux first, then Stable Diffusion, then DeepSeek to ensure reliable generation.
+              Sign up to start creating and save your images!
             </p>
           </div>
         </section>

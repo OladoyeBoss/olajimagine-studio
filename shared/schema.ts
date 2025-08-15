@@ -8,11 +8,13 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  isPremium: text("is_premium").default("false"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const generatedImages = pgTable("generated_images", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
   prompt: text("prompt").notNull(),
   imageUrl: text("image_url").notNull(),
   style: text("style").default("photorealistic"),

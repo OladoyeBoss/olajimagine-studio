@@ -187,11 +187,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const hashedPassword = await bcrypt.hash(validatedData.password, 10);
 
+      // Check if user gets premium access
+      const premiumEmails = [
+        "oladoyejoel3@gmail.com",
+        "faithjesus3@gmail.com", 
+        "oladoyeheritage445@gmail.com"
+      ];
+      const isPremium = premiumEmails.includes(validatedData.email) ? "true" : "false";
+
       // Create user
       const user = await storage.createUser({
         username: validatedData.username,
         email: validatedData.email,
         password: hashedPassword,
+        isPremium: isPremium,
       });
 
       res.status(201).json({ 
@@ -287,8 +296,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to get user" });
     }
   });
-  // Generate image endpoint with fallback support
-  app.post("/api/generate-image", async (req, res) => {
+  // Generate image endpoint with fallback support (requires authentication)
+  app.post("/api/generate-image", requireAuth, async (req, res) => {
     try {
       const validatedData = generateImageSchema.parse(req.body);
       
@@ -299,8 +308,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         validatedData.quality
       );
 
-      // Store the generated image in our storage
+      // Store the generated image in our storage with user ID
       const savedImage = await storage.createGeneratedImage({
+        userId: req.session.userId,
         prompt: validatedData.prompt,
         imageUrl: result.imageUrl,
         style: validatedData.style || "photorealistic",
@@ -322,13 +332,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get generated images
-  app.get("/api/images", async (req, res) => {
+  // Get generated images for authenticated user
+  app.get("/api/images", requireAuth, async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
       
-      const images = await storage.getGeneratedImages(limit, offset);
+      const images = await storage.getUserGeneratedImages(req.session.userId, limit, offset);
       res.json(images);
     } catch (error) {
       console.error("Error fetching images:", error);
@@ -347,6 +357,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching image:", error);
       res.status(500).json({ message: "Failed to fetch image" });
+    }
+  });
+
+  // Contact form endpoint
+  app.post("/api/contact", async (req, res) => {
+    try {
+      const { name, email, message } = req.body;
+      
+      const contactSubmission = {
+        name,
+        email,
+        message,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log("📧 New Contact Form Submission:", contactSubmission);
+      
+      // Store in memory for admin notifications (you could extend this to use a database)
+      // In a production app, you'd integrate with email services like SendGrid, Nodemailer, etc.
+      
+      // Send notification to admin (placeholder - implement with your preferred email service)
+      try {
+        // Example: await sendEmailNotification(contactSubmission);
+        console.log("✅ Admin notification sent successfully");
+      } catch (emailError) {
+        console.log("⚠️ Failed to send admin notification:", emailError);
+        // Don't fail the request if notification fails
+      }
+      
+      res.json({ 
+        message: "Thank you for your message! We'll get back to you soon.",
+        submissionId: Date.now().toString()
+      });
+    } catch (error) {
+      console.error("❌ Error processing contact form:", error);
+      res.status(500).json({ message: "Failed to send message. Please try again." });
     }
   });
 

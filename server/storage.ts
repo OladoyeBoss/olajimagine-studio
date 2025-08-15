@@ -10,6 +10,7 @@ export interface IStorage {
   // Image-related methods
   createGeneratedImage(image: InsertImage): Promise<GeneratedImage>;
   getGeneratedImages(limit?: number, offset?: number): Promise<GeneratedImage[]>;
+  getUserGeneratedImages(userId: string, limit?: number, offset?: number): Promise<GeneratedImage[]>;
   getGeneratedImage(id: string): Promise<GeneratedImage | undefined>;
 }
 
@@ -36,6 +37,43 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).find(
       (user) => user.username === usernameOrEmail || user.email === usernameOrEmail,
     );
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const newUser: User = {
+      id: randomUUID(),
+      ...user,
+      createdAt: new Date(),
+    };
+    this.users.set(newUser.id, newUser);
+    return newUser;
+  }
+
+  async createGeneratedImage(image: InsertImage): Promise<GeneratedImage> {
+    const newImage: GeneratedImage = {
+      id: randomUUID(),
+      ...image,
+      createdAt: new Date(),
+    };
+    this.generatedImages.set(newImage.id, newImage);
+    return newImage;
+  }
+
+  async getGeneratedImages(limit = 20, offset = 0): Promise<GeneratedImage[]> {
+    const allImages = Array.from(this.generatedImages.values())
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return allImages.slice(offset, offset + limit);
+  }
+
+  async getUserGeneratedImages(userId: string, limit = 20, offset = 0): Promise<GeneratedImage[]> {
+    const userImages = Array.from(this.generatedImages.values())
+      .filter(image => image.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return userImages.slice(offset, offset + limit);
+  }
+
+  async getGeneratedImage(id: string): Promise<GeneratedImage | undefined> {
+    return this.generatedImages.get(id);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {

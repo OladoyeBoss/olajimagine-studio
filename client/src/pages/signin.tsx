@@ -15,13 +15,7 @@ export function SignIn() {
 
   const signinMutation = useMutation({
     mutationFn: async (data: { username: string; password: string }) => {
-      return apiRequest("/api/auth/signin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      return apiRequest("POST", "/api/auth/signin", data);
     },
     onSuccess: () => {
       toast({
@@ -67,11 +61,13 @@ export function SignIn() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <Link to="/" className="flex justify-center items-center space-x-3 mb-8">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <i className="fas fa-magic text-white"></i>
-            </div>
+            <img 
+              src="https://files.catbox.moe/i0abuj.jpg" 
+              alt="Oladoyebossimagine Studio" 
+              className="w-10 h-10 rounded-lg object-cover"
+            />
             <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Olajimagine Studio
+              Oladoyebossimagine Studio
             </h1>
           </Link>
           <h2 className="text-center text-3xl font-extrabold text-gray-900">
